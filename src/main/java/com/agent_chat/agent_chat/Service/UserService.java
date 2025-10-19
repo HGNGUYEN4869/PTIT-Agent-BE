@@ -1,11 +1,16 @@
 package com.agent_chat.agent_chat.Service;
 
+import java.net.http.HttpHeaders;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.http.HttpStatus;
 import com.agent_chat.agent_chat.Config.JwtUtil;
 import com.agent_chat.agent_chat.DTO.AuthResponse;
 import com.agent_chat.agent_chat.DTO.LoginRequest;
@@ -42,6 +47,20 @@ public class UserService {
     return userRepository.save(user);
   }
 
+    public ResponseEntity<?> getUserResponse(String userId) {
+    Optional<User> userOpt = userRepository.findByIdUser(UUID.fromString(userId));
+    if (userOpt.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Map.of("error", "User not found 2"));
+    }
+
+    User user = userOpt.get();
+    return ResponseEntity.ok(Map.of(
+        "userId", user.getIdUser(),
+        "username", user.getUserName(),
+        "email", user.getEmail()));
+  }
+
   public AuthResponse login(LoginRequest loginRequest) {
     Optional<User> userOpt = userRepository.findByEmail(loginRequest.getEmail());
 
@@ -58,8 +77,8 @@ public class UserService {
 
     // Generate tokens với userId
     String userId = user.getIdUser().toString();
-    String accessToken = jwtUtil.generateAccessToken(user.getUserName(), userId);
-    String refreshToken = jwtUtil.generateRefreshToken(user.getUserName(), userId);
+    String accessToken = jwtUtil.generateAccessToken(user.getEmail(), userId);
+    String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), userId);
 
     // Lưu tokens vào database
     user.setAccessToken(accessToken);
