@@ -37,10 +37,10 @@ public class ChatController {
   private UUID extractUserIdFromToken(String token) {
     try {
       // Validate token trước
-      String email = jwtUtil.extractEmail(token);
-      if (!jwtUtil.validateToken(token, email)) {
-        throw new RuntimeException("Invalid or expired token");
-      }
+      // String email = jwtUtil.extractEmail(token);
+      // if (!jwtUtil.validateToken(token, email)) {
+      //   throw new RuntimeException("Invalid or expired token");
+      // }
 
       // Check token type
       String tokenType = jwtUtil.getTokenType(token);

@@ -90,9 +90,9 @@ public class JwtUtil {
   }
 
   // Validate token
-  public Boolean validateToken(String token, String email) {
-    final String extractedEmail = extractEmail(token);
-    return (extractedEmail.equals(email) && !isTokenExpired(token));
+  public Boolean validateToken(String token, String userId) {
+    final String extractedUserId = extractUserId(token);
+    return (extractedUserId.equals(userId) && !isTokenExpired(token));
   }
 
   // Get token type (access or refresh)
