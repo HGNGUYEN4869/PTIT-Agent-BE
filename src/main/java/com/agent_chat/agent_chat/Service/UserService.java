@@ -1,16 +1,15 @@
 package com.agent_chat.agent_chat.Service;
 
-import java.net.http.HttpHeaders;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseCookie;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.http.HttpStatus;
+
 import com.agent_chat.agent_chat.Config.JwtUtil;
 import com.agent_chat.agent_chat.DTO.AuthResponse;
 import com.agent_chat.agent_chat.DTO.LoginRequest;
