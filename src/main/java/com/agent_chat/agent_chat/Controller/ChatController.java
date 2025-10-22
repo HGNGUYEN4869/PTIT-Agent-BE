@@ -36,12 +36,6 @@ public class ChatController {
   // Extract userId từ accessToken cookie
   private UUID extractUserIdFromToken(String token) {
     try {
-      // Validate token trước
-      // String email = jwtUtil.extractEmail(token);
-      // if (!jwtUtil.validateToken(token, email)) {
-      //   throw new RuntimeException("Invalid or expired token");
-      // }
-
       // Check token type
       String tokenType = jwtUtil.getTokenType(token);
       if (!"access".equals(tokenType)) {
@@ -59,8 +53,12 @@ public class ChatController {
   // Tạo chat mới
   @PostMapping("/createChat")
   public ResponseEntity<?> createChat(
-      @CookieValue("accessToken") String token,
+      @CookieValue(name = "accessToken", required = false) String token,
       @RequestBody CreateChatRequest request) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       ChatResponse response = chatService.createChat(userId, request);
@@ -73,7 +71,12 @@ public class ChatController {
 
   // Lấy tất cả chats của user
   @GetMapping("/user")
-  public ResponseEntity<?> getUserChats(@CookieValue("accessToken") String token) {
+  public ResponseEntity<?> getUserChats(
+      @CookieValue(name = "accessToken", required = false) String token) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       List<ChatResponse> chats = chatService.getUserChats(userId);
@@ -88,7 +91,11 @@ public class ChatController {
   @GetMapping("/{chatId}")
   public ResponseEntity<?> getChatById(
       @PathVariable UUID chatId,
-      @CookieValue("accessToken") String token) {
+      @CookieValue(name = "accessToken", required = false) String token) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       ChatResponse chat = chatService.getChatById(chatId, userId);
@@ -103,8 +110,12 @@ public class ChatController {
   @PostMapping("/{chatId}/messages")
   public ResponseEntity<?> addMessage(
       @PathVariable UUID chatId,
-      @CookieValue("accessToken") String token,
+      @CookieValue(name = "accessToken", required = false) String token,
       @RequestBody CreateMessageRequest request) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       chatService.addMessage(chatId, userId, request);
@@ -119,8 +130,12 @@ public class ChatController {
   @PutMapping("/{chatId}/title")
   public ResponseEntity<?> updateChatTitle(
       @PathVariable UUID chatId,
-      @CookieValue("accessToken") String token,
+      @CookieValue(name = "accessToken", required = false) String token,
       @RequestBody Map<String, String> body) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       String newTitle = body.get("title");
@@ -136,7 +151,11 @@ public class ChatController {
   @DeleteMapping("/{chatId}")
   public ResponseEntity<?> deleteChat(
       @PathVariable UUID chatId,
-      @CookieValue("accessToken") String token) {
+      @CookieValue(name = "accessToken", required = false) String token) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       chatService.deleteChat(chatId, userId);
@@ -149,7 +168,11 @@ public class ChatController {
 
   // Xóa tất cả chats của user
   @DeleteMapping
-  public ResponseEntity<?> deleteAllUserChats(@CookieValue("accessToken") String token) {
+  public ResponseEntity<?> deleteAllUserChats(@CookieValue(name = "accessToken", required = false) String token) {
+    if (token == null || token.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Missing access token"));
+    }
     try {
       UUID userId = extractUserIdFromToken(token);
       chatService.deleteAllUserChats(userId);
