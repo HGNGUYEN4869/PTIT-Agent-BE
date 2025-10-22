@@ -43,7 +43,7 @@ public class SecurityConfig {
     CorsConfiguration configuration = new CorsConfiguration();
 
     // Cho phép origin từ frontend (React, Vue, Angular, etc.)
-    configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:5173"));
+    configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://ptit-agent.vercel.app/", "http://172.16.5.10/"));
 
     // Cho phép các HTTP methods
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
