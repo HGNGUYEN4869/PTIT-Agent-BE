@@ -259,6 +259,3 @@ public class UserController {
     }
   }
 }
-
-// docker-compose up -d
-// docker exec -it mysql_container mysql -uroot -p123456

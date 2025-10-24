@@ -1,5 +1,6 @@
 package com.agent_chat.agent_chat.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -78,7 +79,8 @@ public class ChatService {
     messageRepository.save(message);
 
     // Cập nhật updatedAt của chat
-    chat = chatRepository.save(chat);
+    chat.setUpdatedAt(LocalDateTime.now());
+    chatRepository.save(chat);
 
     // Reload chat with messages
     return getChatById(chatId, userId);
