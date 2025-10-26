@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.agent_chat.agent_chat.DTO.ChatResponse;
 import com.agent_chat.agent_chat.DTO.CreateChatRequest;
@@ -17,7 +16,6 @@ import com.agent_chat.agent_chat.Entity.Chat;
 import com.agent_chat.agent_chat.Entity.Message;
 import com.agent_chat.agent_chat.Entity.User;
 import com.agent_chat.agent_chat.Repository.ChatRepository;
-import com.agent_chat.agent_chat.Repository.MessageRepository;
 import com.agent_chat.agent_chat.Repository.UserRepository;
 
 @Service
@@ -27,20 +25,18 @@ public class ChatService {
   private ChatRepository chatRepository;
 
   @Autowired
-  private MessageRepository messageRepository;
-
-  @Autowired
   private UserRepository userRepository;
 
   // Tạo chat mới
-  @Transactional
-  public ChatResponse createChat(UUID userId, CreateChatRequest request) {
+  public ChatResponse createChat(String userId, CreateChatRequest request) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new RuntimeException("User not found"));
 
     Chat chat = Chat.builder()
         .user(user)
         .title(request.getTitle() != null ? request.getTitle() : "New Chat")
+        .createdAt(LocalDateTime.now())
+        .updatedAt(LocalDateTime.now())
         .build();
 
     chat = chatRepository.save(chat);
@@ -48,8 +44,7 @@ public class ChatService {
   }
 
   // Lấy tất cả chats của user
-  @Transactional(readOnly = true)
-  public List<ChatResponse> getUserChats(UUID userId) {
+  public List<ChatResponse> getUserChats(String userId) {
     List<Chat> chats = chatRepository.findByUserIdUserOrderByUpdatedAtDesc(userId);
     return chats.stream()
         .map(this::convertToResponse)
@@ -57,52 +52,45 @@ public class ChatService {
   }
 
   // Lấy chi tiết chat với messages
-  @Transactional(readOnly = true)
-  public ChatResponse getChatById(UUID chatId, UUID userId) {
-    Chat chat = chatRepository.findByIdChatAndUserIdUserWithMessages(chatId, userId)
+  public ChatResponse getChatById(String chatId, String userId) {
+    Chat chat = chatRepository.findByIdChatAndUserIdUser(chatId, userId)
         .orElseThrow(() -> new RuntimeException("Chat not found or access denied"));
     return convertToResponse(chat);
   }
 
   // Thêm message vào chat
-  @Transactional
-  public ChatResponse addMessage(UUID chatId, UUID userId, CreateMessageRequest request) {
+  public ChatResponse addMessage(String chatId, String userId, CreateMessageRequest request) {
     Chat chat = chatRepository.findByIdChatAndUserIdUser(chatId, userId)
         .orElseThrow(() -> new RuntimeException("Chat not found or access denied"));
 
     Message message = Message.builder()
+        .idMessage(UUID.randomUUID().toString())
         .role(request.getRole())
         .content(request.getContent())
-        .chat(chat)
+        .createdAt(LocalDateTime.now())
         .build();
 
-    messageRepository.save(message);
-
-    // Cập nhật updatedAt của chat
+    chat.addMessage(message);
     chat.setUpdatedAt(LocalDateTime.now());
     chatRepository.save(chat);
 
-    // Reload chat with messages
     return getChatById(chatId, userId);
   }
 
   // Xóa chat
-  @Transactional
-  public void deleteChat(UUID chatId, UUID userId) {
+  public void deleteChat(String chatId, String userId) {
     Chat chat = chatRepository.findByIdChatAndUserIdUser(chatId, userId)
         .orElseThrow(() -> new RuntimeException("Chat not found or access denied"));
     chatRepository.delete(chat);
   }
 
   // Xóa tất cả chats của user
-  @Transactional
-  public void deleteAllUserChats(UUID userId) {
+  public void deleteAllUserChats(String userId) {
     chatRepository.deleteByUserIdUser(userId);
   }
 
   // Cập nhật title của chat
-  @Transactional
-  public ChatResponse updateChatTitle(UUID chatId, UUID userId, String newTitle) {
+  public ChatResponse updateChatTitle(String chatId, String userId, String newTitle) {
     Chat chat = chatRepository.findByIdChatAndUserIdUser(chatId, userId)
         .orElseThrow(() -> new RuntimeException("Chat not found or access denied"));
 

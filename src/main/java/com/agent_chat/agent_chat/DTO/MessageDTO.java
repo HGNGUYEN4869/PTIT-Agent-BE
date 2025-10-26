@@ -1,7 +1,6 @@
 package com.agent_chat.agent_chat.DTO;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import com.agent_chat.agent_chat.Entity.Message.MessageRole;
 
@@ -15,7 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class MessageDTO {
-  private UUID idMessage;
+  private String idMessage;
   private MessageRole role;
   private String content;
   private LocalDateTime createdAt;
