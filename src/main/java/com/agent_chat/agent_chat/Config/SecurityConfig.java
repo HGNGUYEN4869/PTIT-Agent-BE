@@ -31,6 +31,10 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             // Permit authentication endpoints under both /h/chats and /agent/auth
             .requestMatchers("/h/chats/**", "/agent/auth/**").permitAll()
+            // Permit WebSocket endpoints
+            .requestMatchers("/ws/**").permitAll()
+            // Permit Arduino compiler endpoints
+            .requestMatchers("/h/arduino/**").permitAll()
             .anyRequest().authenticated())
         .sessionManagement(session -> session
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -43,7 +47,8 @@ public class SecurityConfig {
     CorsConfiguration configuration = new CorsConfiguration();
 
     // Cho phép origin từ frontend (React, Vue, Angular, etc.)
-    configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://ptit-agent.vercel.app/", "http://172.16.5.10/"));
+    configuration.setAllowedOrigins(
+        Arrays.asList("http://localhost:2126", "https://ptit-agent.vercel.app/", "http://172.16.5.10/"));
 
     // Cho phép các HTTP methods
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

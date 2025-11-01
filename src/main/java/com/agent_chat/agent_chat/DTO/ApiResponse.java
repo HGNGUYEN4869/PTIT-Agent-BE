@@ -18,7 +18,7 @@ public class ApiResponse<T> {
     private int status;
     private LocalDateTime timestamp;
 
-    // ✅ Tự động set timestamp mặc định nếu không có
+    // Tự động set timestamp mặc định nếu không có
     public static <T> ApiResponse<T> success(T data) {
         return ApiResponse.<T>builder()
                 .success(true)

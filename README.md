@@ -1,383 +1,510 @@
-# Agent Chat - Hướng Dẫn Chạy Dự Án
+# Agent Chat - Arduino IDE Backend
 
-## Yêu Cầu Hệ Thống
+> Backend service for AI chat system and Arduino code compilation with real-time WebSocket logging
 
-### Chạy với Docker (Khuyến nghị - Đơn giản nhất)
+## Tech Stack
 
-- **Docker**: Docker Desktop hoặc Docker Engine
-- **Docker Compose**: Version 3.9+
+- **Framework**: Spring Boot 3.5.6
+- **Language**: Java 21
+- **Database**: MongoDB 7.0
+- **Build Tool**: Maven 3.9+
+- **Security**: JWT (HttpOnly Cookies)
+- **Real-time**: WebSocket
+- **Arduino**: Arduino CLI (on-demand board/library installation)
+- **Deployment**: Docker + Docker Compose
 
-### Chạy trực tiếp (Không dùng Docker)
+---
 
-- **Java**: JDK 21 hoặc cao hơn
-- **Maven**: 3.6 hoặc cao hơn
-- **MySQL**: 8.0 hoặc cao hơn
-- **IDE**: IntelliJ IDEA, Eclipse, hoặc VS Code (khuyến nghị)
+## Quick Start
 
-## 🚀 Cách 1: Chạy Với Docker (Khuyến Nghị)
-
-### 1. Clone Repository
-
-```bash
-git clone <repository-url>
-cd Chat-Agent/agent_chat
-```
-
-### 2. Build và Chạy với Docker Compose
+### Option 1: Docker (Recommended)
 
 ```bash
-# Build ứng dụng với Maven
+# Build JAR
 mvn clean package -DskipTests
 
-# Chạy Docker Compose (sẽ tự động tạo MySQL container và Spring Boot container)
+# Start services
 docker-compose up -d
-```
 
-**Chú ý**: Lệnh này sẽ:
-
-- Tạo MySQL container với database `appAgentDB`
-- Tự động config connection string
-- Chạy Spring Boot app trên port 8080
-- MySQL chạy trên port 3307 (mapped từ 3306)
-
-### 3. Kiểm Tra Ứng Dụng
-
-```bash
-# Xem logs
-docker-compose logs -f app
-
-# Kiểm tra containers đang chạy
+# Check status
 docker ps
-
-# Truy cập ứng dụng
-http://localhost:8080
+curl http://localhost:2005/h/arduino/health
 ```
 
-### 4. Dừng Ứng Dụng
+### Option 2: Local Development
 
 ```bash
-# Dừng containers
-docker-compose down
+# Install MongoDB, Arduino CLI first
+# Configure application.properties
 
-# Dừng và xóa volumes (xóa data)
-docker-compose down -v
-```
-
-### Thông Tin Kết Nối MySQL (Docker)
-
-```
-Host: localhost
-Port: 3307
-Database: appAgentDB
-Username: root
-Password: 123456
-```
-
-## 🔧 Cách 2: Chạy Trực Tiếp (Không Dùng Docker)
-
-### 1. Clone Repository
-
-```bash
-git clone <repository-url>
-cd Chat-Agent/agent_chat
-```
-
-### 2. Cài Đặt và Cấu Hình MySQL
-
-Tạo database mới trong MySQL:
-
-```sql
-CREATE DATABASE appAgentDB;
-```
-
-### 3. Cấu Hình Application Properties
-
-Mở file `src/main/resources/application.properties` và cấu hình:
-
-```properties
-# Database Configuration
-spring.datasource.url=jdbc:mysql://localhost:3306/appAgentDB?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-spring.datasource.username=root
-spring.datasource.password=123456
-
-# JPA Configuration
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-
-# Server Port
-server.port=8080
-```
-
-### 4. Cài Đặt Dependencies
-
-```bash
-mvn clean install
-```
-
-Hoặc skip tests:
-
-```bash
-mvn clean install -DskipTests
-```
-
-### 5. Chạy Ứng Dụng
-
-#### Cách 1: Sử dụng Maven
-
-```bash
+# Run
 mvn spring-boot:run
 ```
 
-#### Cách 2: Sử dụng Maven Wrapper (nếu có)
+---
+
+## Architecture
+
+```
+Frontend (Next.js + React)
+        ↓
+Spring Boot Backend (Port 2005)
+├── Controllers
+│   ├── UserController     → /agent/auth/*
+│   ├── ChatController     → /h/chats/*
+│   └── ArduinoController  → /h/arduino/*
+├── Services
+│   └── ArduinoCompilerService (on-demand install)
+├── WebSocket
+│   └── CompileWebSocketHandler
+└── Database (MongoDB)
+    ├── users
+    ├── chats
+    └── messages
+```
+
+---
+
+## API Endpoints
+
+### 1. Authentication (`/agent/auth`)
+
+**POST `/agent/auth/register`**
+```json
+{
+  "userName": "john",
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
+
+**POST `/agent/auth/login`**
+```json
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
+→ Returns HttpOnly cookies: `accessToken` (15min), `refreshToken` (7 days)
+
+**GET `/agent/auth/me`**
+- Auto-refresh token if expired
+- Returns user info
+
+**POST `/agent/auth/logout`**
+```json
+{
+  "email": "john@example.com"
+}
+```
+
+### 2. Chat System (`/h/chats`)
+
+Requires `accessToken` cookie. See `ChatController.java` for full API.
+
+### 3. Arduino Compiler (`/h/arduino`)
+
+**WebSocket: `ws://localhost:2005/ws/compile/{sessionId}`**
+
+Receives real-time logs:
+```json
+{
+  "message": "Compilation successful!",
+  "timestamp": "2025-11-01T10:30:00",
+  "level": "SUCCESS"
+}
+```
+
+**POST `/h/arduino/compile`**
+
+Form-data:
+- `file`: .ino file
+- `sessionId`: WebSocket session ID
+- `board`: Board FQBN (optional, default: `arduino:avr:uno`)
+
+Supported boards:
+- `arduino:avr:uno`, `arduino:avr:nano`, `arduino:avr:mega`
+- `esp8266:esp8266:generic`
+- `esp32:esp32:esp32`, `esp32:esp32:esp32s2`, `esp32:esp32:esp32s3`, `esp32:esp32:esp32c3`
+- `STM32:stm32:GenF1`
+
+**GET `/h/arduino/firmware/uno?sessionId={id}`**
+
+Download compiled .hex firmware (auto-deletes after download)
+
+**GET `/h/arduino/firmware/esp32?sessionId={id}`**
+
+Download compiled .bin firmware
+
+**GET `/h/arduino/firmware/stm32?sessionId={id}`**
+
+Download compiled .dfu/.bin firmware
+
+---
+
+## Features
+
+### On-Demand Board Installation
+
+Automatically installs board cores when needed:
+
+```
+Board esp32:esp32 chưa có, đang cài...
+Quá trình này có thể mất 2-5 phút
+
+Đang cập nhật board index...
+Đang tải và cài đặt esp32:esp32...
+✅ Đã cài xong board esp32:esp32
+```
+
+Board package URLs:
+- ESP32: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
+- ESP8266: `http://arduino.esp8266.com/stable/package_esp8266com_index.json`
+- STM32: `https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json`
+
+### On-Demand Library Installation
+
+Parses `#include` statements and auto-installs missing libraries:
+
+```
+��� Library Adafruit GFX Library chưa có, đang cài...
+✅ Đã cài library Adafruit GFX Library
+```
+
+**Supported libraries:**
+
+| Header | Library Name |
+|--------|--------------|
+| `Adafruit_GFX.h` | Adafruit GFX Library |
+| `Adafruit_SSD1306.h` | Adafruit SSD1306 |
+| `DHT.h` | DHT sensor library |
+| `ArduinoJson.h` | ArduinoJson |
+| `PubSubClient.h` | PubSubClient |
+| `TFT_eSPI.h` | TFT_eSPI |
+| `LiquidCrystal_I2C.h` | LiquidCrystal I2C |
+| `OneWire.h` | OneWire |
+| `DallasTemperature.h` | DallasTemperature |
+
+**Built-in (auto-skipped):** WiFi, SPI, Wire, EEPROM, Servo, SD, Ethernet
+
+### Automatic Cache Cleanup
+
+After firmware download:
+1. Deletes `build/{sessionId}/` folder
+2. Searches and removes Arduino cache files:
+   - `~/.cache/arduino/sketches/`
+   - `~/.arduino15/sketches/`
+3. Removes empty directories
+4. Clears session tracking
+
+```
+��� Cleaning up Arduino cache for session: abc-123
+���️ Deleted: Blink.ino.hex
+���️ Deleted: Blink.ino.elf
+✅ Cleanup completed - deleted 5 items
+```
+
+### Docker Volume Persistence
+
+Installed boards/libraries persist across container restarts:
+```yaml
+volumes:
+  - arduino-data:/root/.arduino15
+```
+
+---
+
+## Configuration
+
+### application.properties
+
+```properties
+spring.application.name=agent_chat
+spring.data.mongodb.uri=mongodb://root:123456@localhost:27017/appAgentDB?authSource=admin
+spring.data.mongodb.database=appAgentDB
+server.port=2005
+
+# Logging
+logging.level.root=WARN
+logging.level.com.agent_chat=DEBUG
+```
+
+### docker-compose.yml
+
+```yaml
+services:
+  db:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - db_data:/data/db
+    
+  app:
+    build: .
+    ports:
+      - "2005:2005"
+    volumes:
+      - arduino-data:/root/.arduino15
+    environment:
+      JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+```
+
+### Dockerfile
+
+```dockerfile
+FROM eclipse-temurin:21-jre-jammy
+
+# Install Arduino CLI
+RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh && \
+    mv bin/arduino-cli /usr/local/bin/
+
+# Install Arduino AVR core
+RUN arduino-cli core update-index && \
+    arduino-cli core install arduino:avr
+
+# Copy JAR
+COPY target/*.jar app.jar
+
+EXPOSE 2005
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+```
+
+---
+
+## Database Schema
+
+### MongoDB Collections
+
+**users**
+```javascript
+{
+  _id: ObjectId,
+  idUser: String (UUID),
+  userName: String (unique),
+  email: String (unique),
+  password: String (hashed),
+  accessToken: String,
+  refreshToken: String
+}
+```
+
+**chats**
+```javascript
+{
+  _id: ObjectId,
+  idChat: String (UUID),
+  idUser: String (UUID),
+  title: String,
+  createdAt: ISODate,
+  updatedAt: ISODate
+}
+```
+
+**messages**
+```javascript
+{
+  _id: ObjectId,
+  idMessage: String (UUID),
+  role: String ("USER" | "ASSISTANT"),
+  content: String,
+  idChat: String (UUID),
+  createdAt: ISODate
+}
+```
+
+---
+
+## Development
+
+### Install Arduino CLI
+
+**Windows:**
+```powershell
+curl -fsSL https://github.com/arduino/arduino-cli/releases/download/v1.1.2/arduino-cli_1.1.2_Windows_64bit.zip -o arduino-cli.zip
+Expand-Archive arduino-cli.zip -DestinationPath "C:\Program Files\ArduinoCLI"
+$env:Path += ";C:\Program Files\ArduinoCLI"
+```
+
+**macOS/Linux:**
+```bash
+# macOS
+brew install arduino-cli
+
+# Linux
+curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+```
+
+**Initialize:**
+```bash
+arduino-cli config init
+arduino-cli core update-index
+arduino-cli core install arduino:avr
+```
+
+### Run Tests
 
 ```bash
-# Windows
-.\mvnw.cmd spring-boot:run
+# Build
+mvn clean install
 
-# Linux/Mac
-./mvnw spring-boot:run
+# Run
+mvn spring-boot:run
+
+# Test compilation
+curl -X POST http://localhost:2005/h/arduino/compile \
+  -H "Cookie: accessToken=..." \
+  -F "file=@sketch.ino" \
+  -F "sessionId=test-123" \
+  -F "board=arduino:avr:uno"
 ```
 
-#### Cách 3: Chạy file JAR
+---
+
+## Deployment
+
+### Docker Commands
 
 ```bash
-# Build JAR file
-mvn clean package
+# Build and start
+docker-compose up -d
 
-# Chạy JAR
-java -jar target/agent_chat-0.0.1-SNAPSHOT.jar
+# View logs
+docker-compose logs -f app
+
+# Restart
+docker-compose restart app
+
+# Stop and remove
+docker-compose down
+
+# Rebuild
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
 ```
 
-#### Cách 4: Từ IDE
+### Resource Monitoring
 
-- Mở project trong IntelliJ IDEA hoặc Eclipse
-- Tìm class có annotation `@SpringBootApplication`
-- Click chuột phải và chọn "Run"
+```bash
+# Container stats
+docker stats spring_app
 
-### 6. Kiểm Tra Ứng Dụng
+# Arduino volume size
+docker system df -v | grep arduino-data
 
-Sau khi chạy thành công, truy cập:
-
-```
-http://localhost:8080
-```
-
-Hoặc kiểm tra health check (nếu có):
-
-```
-http://localhost:8080/actuator/health
+# Check Arduino CLI
+docker exec spring_app arduino-cli version
+docker exec spring_app arduino-cli core list
 ```
 
-## API Documentation
+---
 
-Nếu dự án sử dụng Swagger/OpenAPI, truy cập:
+## Troubleshooting
 
+### arduino-cli not found
+
+```bash
+# Check PATH
+echo $PATH
+
+# Manual install
+docker exec spring_app which arduino-cli
 ```
-http://localhost:8080/swagger-ui.html
+
+### Board not installed
+
+```bash
+# Manual install
+docker exec spring_app arduino-cli core install esp32:esp32 \
+  --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 ```
 
-## Cấu Trúc Thư Mục
+### MongoDB connection failed
+
+```bash
+# Check MongoDB
+docker logs mongodb_container
+
+# Check connection string
+docker exec spring_app env | grep MONGODB
+```
+
+### Out of memory
+
+```yaml
+# Increase Docker limits in docker-compose.yml
+deploy:
+  resources:
+    limits:
+      memory: 2G
+```
+
+---
+
+## Security
+
+- **JWT Tokens**: Stored in HttpOnly cookies (XSS-safe)
+- **Password**: Hashed before storage
+- **CORS**: Configured for specific origins
+- **File Upload**: Validated (.ino only, 10MB max)
+- **MongoDB**: Authentication enabled
+
+**Production checklist:**
+- [ ] Set `secure: true` for cookies (HTTPS)
+- [ ] Use environment variables for secrets
+- [ ] Enable SSL/TLS
+- [ ] Configure firewall
+- [ ] Regular security updates
+
+---
+
+## Project Structure
 
 ```
 agent_chat/
 ├── src/
 │   ├── main/
-│   │   ├── java/          # Source code Java
-│   │   └── resources/     # Configuration files
-│   └── test/              # Test files
-├── target/                # Build output
-├── docker-compose.yml     # Docker Compose configuration
-├── Dockerfile            # Docker image configuration
-├── pom.xml               # Maven configuration
-└── README.md             # Documentation
+│   │   ├── java/com/agent_chat/
+│   │   │   ├── Controller/
+│   │   │   │   ├── ArduinoController.java
+│   │   │   │   ├── ChatController.java
+│   │   │   │   └── UserController.java
+│   │   │   ├── Service/
+│   │   │   │   └── ArduinoCompilerService.java
+│   │   │   ├── WebSocket/
+│   │   │   │   └── CompileWebSocketHandler.java
+│   │   │   ├── Entity/
+│   │   │   ├── Repository/
+│   │   │   ├── Config/
+│   │   │   └── DTO/
+│   │   └── resources/
+│   │       └── application.properties
+│   └── test/
+├── build/                  # Temporary firmware files
+├── docker-compose.yml
+├── Dockerfile
+├── pom.xml
+└── README.md
 ```
 
-## Docker Configuration Details
+---
 
-### docker-compose.yml
-
-- **MySQL Service**:
-
-  - Image: `mysql:8.0`
-  - Port: `3307:3306` (host:container)
-  - Database: `appAgentDB`
-  - Root Password: `123456`
-  - Volume: `db_data` (persistent storage)
-  - Health check: Tự động kiểm tra MySQL sẵn sàng
-
-- **Spring Boot App Service**:
-  - Build từ Dockerfile
-  - Port: `8080:8080`
-  - Phụ thuộc vào MySQL (chờ MySQL healthy mới start)
-  - Auto-restart on failure
-
-### Dockerfile
-
-- Base Image: `openjdk:21-jdk-slim`
-- Sử dụng file JAR đã build: `agent_chat-0.0.1-SNAPSHOT.jar`
-- Expose port: `8080`
-
-## Troubleshooting
-
-### Docker
-
-#### Lỗi Port đã được sử dụng
-
-```bash
-# Dừng container đang chạy
-docker-compose down
-
-# Hoặc thay đổi port trong docker-compose.yml
-ports:
-  - "8081:8080"  # Thay 8080 thành port khác
-```
-
-#### MySQL container không healthy
-
-```bash
-# Xem logs MySQL
-docker-compose logs db
-
-# Restart containers
-docker-compose restart
-
-# Xóa volumes và tạo lại
-docker-compose down -v
-docker-compose up -d
-```
-
-#### Lỗi "Cannot connect to Docker daemon"
-
-```bash
-# Khởi động Docker Desktop hoặc Docker service
-# Windows: Mở Docker Desktop
-# Linux: sudo systemctl start docker
-```
-
-#### Rebuild lại containers
-
-```bash
-# Build lại JAR file
-mvn clean package -DskipTests
-
-# Rebuild và restart containers
-docker-compose up -d --build
-```
-
-### Chạy Trực Tiếp (Không Docker)
-
-#### Lỗi Port đã được sử dụng
-
-```bash
-# Thay đổi port trong application.properties
-server.port=8081
-```
-
-#### Lỗi kết nối Database
-
-- Kiểm tra MySQL service đã chạy chưa: `sudo systemctl status mysql`
-- Kiểm tra database `appAgentDB` đã được tạo chưa
-- Kiểm tra username/password đúng chưa
-- Kiểm tra port MySQL (mặc định 3306)
-
-#### Lỗi Maven dependencies
-
-```bash
-# Clear Maven cache và rebuild
-mvn clean
-mvn dependency:purge-local-repository
-mvn clean install
-```
-
-#### Lỗi "Access denied for user 'root'@'localhost'"
-
-```bash
-# Reset MySQL password hoặc tạo user mới
-mysql -u root -p
-CREATE USER 'root'@'localhost' IDENTIFIED BY '123456';
-GRANT ALL PRIVILEGES ON appAgentDB.* TO 'root'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-## Môi Trường Development
-
-### Hot Reload (Spring Boot DevTools)
-
-Nếu đã thêm Spring Boot DevTools, ứng dụng sẽ tự động reload khi có thay đổi code.
-
-```xml
-<!-- Thêm vào pom.xml nếu chưa có -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-devtools</artifactId>
-    <scope>runtime</scope>
-    <optional>true</optional>
-</dependency>
-```
-
-## Build cho Production
-
-### Với Docker
-
-```bash
-# Build production image
-docker build -t agent-chat:prod .
-
-# Chạy production container
-docker run -d -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:mysql://your-prod-db:3306/appAgentDB \
-  -e SPRING_DATASOURCE_USERNAME=prod_user \
-  -e SPRING_DATASOURCE_PASSWORD=prod_password \
-  agent-chat:prod
-```
-
-### Không Docker
-
-```bash
-# Build với profile production
-mvn clean package -Pprod
-
-# Chạy với profile production
-java -jar target/agent_chat-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
-```
-
-## Các Lệnh Docker Hữu Ích
-
-```bash
-# Xem logs real-time
-docker-compose logs -f
-
-# Xem logs của một service cụ thể
-docker-compose logs -f app
-docker-compose logs -f db
-
-# Restart một service
-docker-compose restart app
-
-# Stop tất cả services
-docker-compose stop
-
-# Start lại services đã stop
-docker-compose start
-
-# Xem trạng thái containers
-docker-compose ps
-
-# Vào trong MySQL container
-docker exec -it mysql_container mysql -uroot -p123456
-
-# Vào shell của app container
-docker exec -it spring_app bash
-
-# Xóa tất cả (containers, networks, volumes)
-docker-compose down -v
-```
-
-## Tài Liệu Tham Khảo
+## References
 
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [Maven Documentation](https://maven.apache.org/guides/)
+- [Arduino CLI Documentation](https://arduino.github.io/arduino-cli/)
+- [MongoDB Manual](https://www.mongodb.com/docs/manual/)
+- [Docker Documentation](https://docs.docker.com/)
 
-## Liên Hệ & Hỗ Trợ
+---
 
-Nếu gặp vấn đề, vui lòng tạo issue trên repository hoặc liên hệ team phát triển.
+**Version**: 2.0.0  
+**Last Updated**: November 1, 2025  
+**Port**: 2005  
+**Author**: Development Team

@@ -215,39 +215,6 @@ public class UserController {
     }
   }
 
-  // @PostMapping("/refresh")
-  // public ResponseEntity<?> refreshToken(@CookieValue(name = "refreshToken",
-  // required = false) String refreshToken) {
-  // try {
-  // if (refreshToken == null || refreshToken.isEmpty()) {
-  // return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-  // .body(Map.of("error", "Refresh token not found in cookie"));
-  // }
-
-  // AuthResponse authResponse = userService.refreshToken(refreshToken);
-
-  // // Tạo access token cookie mới
-  // ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken",
-  // authResponse.getAccessToken())
-  // .httpOnly(true)
-  // .secure(false)
-  // .path("/")
-  // .maxAge(15 * 60)
-  // .sameSite("Lax")
-  // .build();
-
-  // return ResponseEntity.ok()
-  // .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
-  // .body(Map.of(
-  // "message", authResponse.getMessage(),
-  // "userId", authResponse.getUserId(),
-  // "username", authResponse.getUserName()));
-  // } catch (RuntimeException e) {
-  // return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-  // .body(Map.of("error", e.getMessage()));
-  // }
-  // }
-
   @PostMapping("/logout")
   public ResponseEntity<?> logout(
       @CookieValue(name = "accessToken", required = false) String accessToken,

@@ -36,6 +36,9 @@ services:
       # JVM tuning cho server nhỏ
       JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
     restart: on-failure
+    volumes:
+      #Persist Arduino cores/libs để không mất khi restart
+      - arduino-data:/root/.arduino15
     networks:
       - app-network
     # Giới hạn resource để tránh server quá tải
@@ -50,6 +53,7 @@ services:
 
 volumes:
   db_data:
+  arduino-data: # Volume lưu Arduino cores & libraries
 
 networks:
   app-network:
