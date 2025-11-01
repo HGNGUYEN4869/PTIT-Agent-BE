@@ -2,7 +2,6 @@ package com.agent_chat.agent_chat.Service;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ public class UserService {
   @Autowired
   private JwtUtil jwtUtil;
 
-  public User register(RegisterRequest request) {
+  public AuthResponse register(RegisterRequest request) {
     // kiểm tra email đã tồn tại
     Optional<User> existing = userRepository.findByEmail(request.getEmail());
     if (existing.isPresent()) {
@@ -41,13 +40,30 @@ public class UserService {
     user.setUserName(request.getUsername());
     user.setEmail(request.getEmail());
     user.setPassword(passwordEncoder.encode(request.getPassword()));
-    user.setAccessToken(null);
-    user.setRefreshToken(null);
-    return userRepository.save(user);
+
+    // Tạo tokens ngay sau khi register (auto-login)
+    user = userRepository.save(user); // Save để có ID
+
+    String userId = user.getIdUser();
+    String accessToken = jwtUtil.generateAccessToken(user.getEmail(), userId);
+    String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), userId);
+
+    // Lưu tokens vào database
+    user.setAccessToken(accessToken);
+    user.setRefreshToken(refreshToken);
+    userRepository.save(user);
+
+    return new AuthResponse(
+        "Registration successful",
+        user.getIdUser(),
+        user.getUserName(),
+        user.getEmail(),
+        accessToken,
+        refreshToken);
   }
 
-    public ResponseEntity<?> getUserResponse(String userId) {
-    Optional<User> userOpt = userRepository.findByIdUser(UUID.fromString(userId));
+  public ResponseEntity<?> getUserResponse(String userId) {
+    Optional<User> userOpt = userRepository.findByIdUser(userId);
     if (userOpt.isEmpty()) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND)
           .body(Map.of("error", "User not found 2"));
@@ -75,7 +91,7 @@ public class UserService {
     }
 
     // Generate tokens với userId
-    String userId = user.getIdUser().toString();
+    String userId = user.getIdUser();
     String accessToken = jwtUtil.generateAccessToken(user.getEmail(), userId);
     String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), userId);
 
@@ -122,7 +138,7 @@ public class UserService {
       }
 
       // Generate new access token với userId
-      String userId = user.getIdUser().toString();
+      String userId = user.getIdUser();
       String newAccessToken = jwtUtil.generateAccessToken(email, userId);
 
       // Update access token in database

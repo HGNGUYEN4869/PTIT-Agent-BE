@@ -17,5 +17,5 @@ ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxGCPauseMillis=50 -Xms256m -Xmx512m"
 WORKDIR /app
 COPY --from=builder /build/target/*.jar app.jar
 
-EXPOSE 8080
+EXPOSE 2005
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

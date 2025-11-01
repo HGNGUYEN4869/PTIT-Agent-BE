@@ -1,7 +1,5 @@
 package com.agent_chat.agent_chat.DTO;
 
-import java.util.UUID;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AuthResponse {
   private String message;
-  private UUID userId;
+  private String userId;
   private String userName;
   private String email;
   private String accessToken;

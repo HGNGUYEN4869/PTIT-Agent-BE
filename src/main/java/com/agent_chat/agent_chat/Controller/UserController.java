@@ -2,7 +2,6 @@ package com.agent_chat.agent_chat.Controller;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -51,13 +50,13 @@ public class UserController {
       @CookieValue(name = "accessToken", required = false) String accessToken,
       @CookieValue(name = "refreshToken", required = false) String refreshToken) {
     try {
-        // 1. Thử xử lý access token
-        ResponseEntity<?> accessResponse = handleAccessToken(accessToken);
-        if (accessResponse != null) {
-            return accessResponse;
-        }
-        // 2. Nếu access token không hợp lệ, dùng refresh token
-        return handleRefreshToken(refreshToken);
+      // 1. Thử xử lý access token
+      ResponseEntity<?> accessResponse = handleAccessToken(accessToken);
+      if (accessResponse != null) {
+        return accessResponse;
+      }
+      // 2. Nếu access token không hợp lệ, dùng refresh token
+      return handleRefreshToken(refreshToken);
 
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -101,7 +100,7 @@ public class UserController {
             .body(Map.of("error", "Invalid token type"));
       }
 
-      Optional<User> userOpt = userRepository.findByIdUser(UUID.fromString(userId));
+      Optional<User> userOpt = userRepository.findByIdUser(userId);
       if (userOpt.isEmpty()) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(Map.of("error", "User not found"));
@@ -141,14 +140,37 @@ public class UserController {
   }
 
   @PostMapping("/register")
-  public ResponseEntity<?> register(@RequestBody RegisterRequest request){
+  public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
     try {
-      User registeredUser = userService.register(request);
-      return ResponseEntity.ok(Map.of(
-          "message", "User registered successfully",
-          "userId", registeredUser.getIdUser(),
-          "username", registeredUser.getUserName(),
-          "email", registeredUser.getEmail()));
+      AuthResponse authResponse = userService.register(request);
+
+      // Set Access Token as HttpOnly Cookie (15 minutes)
+      ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", authResponse.getAccessToken())
+          .httpOnly(true)
+          .secure(false)
+          .path("/")
+          .maxAge(15 * 60)
+          .sameSite("Lax")
+          .build();
+
+      // Set Refresh Token as HttpOnly Cookie (7 days)
+      ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", authResponse.getRefreshToken())
+          .httpOnly(true)
+          .secure(false)
+          .path("/agent/auth/me")
+          .maxAge(7 * 24 * 60 * 60)
+          .sameSite("Lax")
+          .build();
+
+      // Trả về response với cookies và thông tin user
+      return ResponseEntity.ok()
+          .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
+          .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+          .body(Map.of(
+              "message", authResponse.getMessage(),
+              "userId", authResponse.getUserId(),
+              "username", authResponse.getUserName(),
+              "email", authResponse.getEmail()));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Map.of("error", e.getMessage()));

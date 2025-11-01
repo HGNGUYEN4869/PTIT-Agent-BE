@@ -1,39 +1,56 @@
 services:
   db:
-    image: mysql:8.0
-    container_name: mysql_container
+    image: mongo:7.0
+    container_name: mongodb_container
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
-      MYSQL_DATABASE: appAgentDB
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 123456
+      MONGO_INITDB_DATABASE: appAgentDB
     ports:
-      - "3307:3306"
+      - "27017:27017"
     volumes:
-      - db_data:/var/lib/mysql
-      - ./disable-name-resolve.cnf:/etc/mysql/conf.d/disable-name-resolve.cnf
+      - db_data:/data/db
+    # Tăng performance MongoDB
+    command: mongod --wiredTigerCacheSizeGB 1.5 --quiet
     healthcheck:
-      test:
-        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/appAgentDB --quiet
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   app:
     build: .
     container_name: spring_app
     ports:
-      - "8080:8080"
+      - "2005:2005"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/appAgentDB?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&autoReconnect=true&connectTimeout=5000&socketTimeout=5000
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 123456
-      SPRING_JPA_SHOW_SQL: "false"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"
+      SPRING_DATA_MONGODB_URI: mongodb://root:123456@db:27017/appAgentDB?authSource=admin&connectTimeoutMS=3000&socketTimeoutMS=3000&serverSelectionTimeoutMS=3000
+      SPRING_DATA_MONGODB_DATABASE: appAgentDB
+      SPRING_PROFILES_ACTIVE: prod
+      # JVM tuning cho server nhỏ
+      JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
     restart: on-failure
+    networks:
+      - app-network
+    # Giới hạn resource để tránh server quá tải
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
 volumes:
   db_data:
+
+networks:
+  app-network:
+    driver: bridge
