@@ -34,7 +34,7 @@ public class CompileWebSocketHandler extends TextWebSocketHandler {
     System.out.println(" WebSocket connected: " + sessionId);
 
     // Gửi message chào mừng
-    sendLog(sessionId, "🔌 Connected to Arduino compile server...", "INFO");
+    sendLog(sessionId, "Connected to Arduino compile server...", "INFO");
   }
 
   @Override
