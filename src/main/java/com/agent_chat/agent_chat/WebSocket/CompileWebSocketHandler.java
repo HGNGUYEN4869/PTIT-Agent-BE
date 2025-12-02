@@ -38,7 +38,7 @@ public class CompileWebSocketHandler extends TextWebSocketHandler {
     // Thêm session vào list, hỗ trợ multiple connections
     sessions.computeIfAbsent(sessionId, k -> new CopyOnWriteArrayList<>()).add(session);
 
-    System.out.println("✅ WebSocket connected: " + sessionId +
+    System.out.println("WebSocket connected: " + sessionId +
         " (Total connections for this session: " + sessions.get(sessionId).size() + ")");
 
     // Gửi message chào mừng
@@ -60,7 +60,7 @@ public class CompileWebSocketHandler extends TextWebSocketHandler {
       }
 
       int remainingConnections = sessionList.isEmpty() ? 0 : sessionList.size();
-      System.out.println("❌ WebSocket disconnected: " + sessionId +
+      System.out.println("WebSocket disconnected: " + sessionId +
           " (Remaining connections: " + remainingConnections + ")");
     }
   }
