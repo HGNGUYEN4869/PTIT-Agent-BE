@@ -2,6 +2,7 @@ package com.agent_chat.agent_chat.Service;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,6 +59,13 @@ public class ArduinoCompilerService {
         wsHandler.sendLog(sessionId, "Compilation aborted!", "ERROR");
         return;
       }
+
+      Path oldBuildPath = Paths.get("build", sessionId);
+      if (Files.exists(oldBuildPath)) {
+        cleanupOldBuildFiles(oldBuildPath, sessionId);
+      }
+
+      cleanupArduinoCacheForSession(sessionId);
 
       // On-demand: Đảm bảo board đã được cài đặt
       ensureBoardInstalled(sessionId, board);
@@ -581,5 +589,27 @@ public class ArduinoCompilerService {
 
     process.waitFor();
     return output.toString();
+  }
+
+  /**
+   * ✅ Helper: Cleanup old build files trước khi compile
+   * Xóa toàn bộ build folder của session
+   */
+  private void cleanupOldBuildFiles(Path buildPath, String sessionId) {
+    try {
+      Files.walk(buildPath)
+          .sorted((a, b) -> b.compareTo(a)) // Xóa file trước, folder sau
+          .forEach(path -> {
+            try {
+              Files.delete(path);
+              System.out.println("🗑️ Deleted old build: " + path);
+            } catch (IOException e) {
+              System.err.println("Failed to delete: " + path);
+            }
+          });
+      System.out.println("✅ Cleaned up old build files for session: " + sessionId);
+    } catch (IOException e) {
+      System.err.println("⚠️ Error cleaning old build files: " + e.getMessage());
+    }
   }
 }
