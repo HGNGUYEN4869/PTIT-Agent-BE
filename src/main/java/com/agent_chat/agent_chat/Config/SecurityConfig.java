@@ -48,7 +48,7 @@ public class SecurityConfig {
 
     // Cho phép origin từ frontend (React, Vue, Angular, etc.)
     configuration.setAllowedOrigins(
-        Arrays.asList("http://localhost:2126", "https://ptit-agent.vercel.app", "http://172.16.5.10", "http://172.19.176.1:2126", "ptit-agent-production.up.railway.app"));
+        Arrays.asList("http://localhost:2126", "https://ptit-agent.vercel.app", "http://172.16.5.10", "http://172.19.176.1:2126", "https://ptit-agent-production.up.railway.app"));
 
     // Cho phép các HTTP methods
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
