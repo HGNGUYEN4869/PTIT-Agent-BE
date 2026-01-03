@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 import com.agent_chat.agent_chat.Config.JwtUtil;
 import com.agent_chat.agent_chat.DTO.AuthResponse;
+import com.agent_chat.agent_chat.DTO.CheckAccount;
+import com.agent_chat.agent_chat.DTO.CheckAccountResponse;
 import com.agent_chat.agent_chat.DTO.LoginRequest;
 import com.agent_chat.agent_chat.DTO.RegisterRequest;
 import com.agent_chat.agent_chat.Entity.User;
@@ -29,6 +31,30 @@ public class UserService {
   private JwtUtil jwtUtil;
 
   public AuthResponse register(RegisterRequest request) {
+    // Kiểm tra nếu cả stuId và citizenId đều null hoặc ""
+    boolean stuIdEmpty = request.getStuId() == null || request.getStuId().isEmpty();
+    boolean citizenIdEmpty = request.getCitizenId() == null || request.getCitizenId().isEmpty();
+
+    if (stuIdEmpty && citizenIdEmpty) {
+      throw new RuntimeException("Chưa đăng ký căn cước hoặc mã sv");
+    }
+
+    // Kiểm tra stuId khác "" trước
+    if (request.getStuId() != null && !request.getStuId().isEmpty()) {
+      Optional<User> existingStuId = userRepository.findByStuId(request.getStuId());
+      if (existingStuId.isPresent()) {
+        throw new RuntimeException("Tài khoản có mã sv đã tồn tại");
+      }
+    }
+
+    // Kiểm tra citizenId khác "" trước
+    if (request.getCitizenId() != null && !request.getCitizenId().isEmpty()) {
+      Optional<User> existingCitizenId = userRepository.findByCitizenId(request.getCitizenId());
+      if (existingCitizenId.isPresent()) {
+        throw new RuntimeException("Tài khoản có mã căn cước đã tồn tại");
+      }
+    }
+
     // kiểm tra email đã tồn tại
     Optional<User> existing = userRepository.findByEmail(request.getEmail());
     if (existing.isPresent()) {
@@ -39,6 +65,8 @@ public class UserService {
     User user = new User();
     user.setUserName(request.getUsername());
     user.setEmail(request.getEmail());
+    user.setStuId(request.getStuId());
+    user.setCitizenId(request.getCitizenId());
     user.setPassword(passwordEncoder.encode(request.getPassword()));
 
     // Tạo tokens ngay sau khi register (auto-login)
@@ -57,6 +85,8 @@ public class UserService {
         "Registration successful",
         user.getIdUser(),
         user.getUserName(),
+        user.getStuId() != null ? user.getStuId() : "",
+        user.getCitizenId() != null ? user.getCitizenId() : "",
         user.getEmail(),
         accessToken,
         refreshToken);
@@ -73,6 +103,8 @@ public class UserService {
     return ResponseEntity.ok(Map.of(
         "userId", user.getIdUser(),
         "username", user.getUserName(),
+        "stuId", user.getStuId() != null ? user.getStuId() : "",
+        "citizenId", user.getCitizenId() != null ? user.getCitizenId() : "",
         "email", user.getEmail()));
   }
 
@@ -80,14 +112,14 @@ public class UserService {
     Optional<User> userOpt = userRepository.findByEmail(loginRequest.getEmail());
 
     if (userOpt.isEmpty()) {
-      throw new RuntimeException("Invalid email or password");
+      throw new RuntimeException("Email không tồn tại");
     }
 
     User user = userOpt.get();
 
     // Kiểm tra password với BCrypt
     if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-      throw new RuntimeException("Invalid username or password");
+      throw new RuntimeException("Sai mật khẩu");
     }
 
     // Generate tokens với userId
@@ -104,9 +136,37 @@ public class UserService {
         "Login successful",
         user.getIdUser(),
         user.getUserName(),
+        user.getStuId() != null ? user.getStuId() : "",
+        user.getCitizenId() != null ? user.getCitizenId() : "",
         user.getEmail(),
         accessToken,
         refreshToken);
+  }
+
+  public CheckAccountResponse checkAccount(CheckAccount checkAccount) {
+    if (checkAccount.getStuId() == "" && checkAccount.getCitizenId() == "") {
+      throw new RuntimeException("Lỗi không có request");
+    }
+
+    Optional<User> userOpt = userRepository.findByStuId(checkAccount.getStuId());
+
+    if (userOpt.isEmpty()) {
+      userOpt = userRepository.findByCitizenId(checkAccount.getCitizenId());
+    }
+
+    if (userOpt.isEmpty()) {
+      return new CheckAccountResponse(
+          "Không tồn tại tài khoản",
+          "",
+          "");
+    }
+
+    User user = userOpt.get();
+
+    return new CheckAccountResponse(
+        "Tồn tại tài khoản",
+        user.getUserName(),
+        user.getEmail());
   }
 
   public AuthResponse refreshToken(String refreshToken) {
@@ -149,6 +209,8 @@ public class UserService {
           "Token refreshed successfully",
           user.getIdUser(),
           user.getUserName(),
+          user.getStuId() != null ? user.getStuId() : "",
+          user.getCitizenId() != null ? user.getCitizenId() : "",
           user.getEmail(),
           newAccessToken,
           refreshToken);

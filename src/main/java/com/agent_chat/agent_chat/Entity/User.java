@@ -27,6 +27,10 @@ public class User {
     @Indexed(unique = true)
     private String email;
 
+    private String stuId;
+
+    private String citizenId;
+
     private String password;
     private String accessToken;
     private String refreshToken;

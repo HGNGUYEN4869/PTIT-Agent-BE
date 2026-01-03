@@ -2,7 +2,6 @@ package com.agent_chat.agent_chat.Service;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -60,12 +59,12 @@ public class ArduinoCompilerService {
         return;
       }
 
-      Path oldBuildPath = Paths.get("build", sessionId);
-      if (Files.exists(oldBuildPath)) {
-        cleanupOldBuildFiles(oldBuildPath, sessionId);
-      }
+      // Path oldBuildPath = Paths.get("build", sessionId);
+      // if (Files.exists(oldBuildPath)) {
+      //   cleanupOldBuildFiles(oldBuildPath, sessionId);
+      // }
 
-      cleanupArduinoCacheForSession(sessionId);
+      // cleanupArduinoCacheForSession(sessionId);
 
       // On-demand: Đảm bảo board đã được cài đặt
       ensureBoardInstalled(sessionId, board);
@@ -259,11 +258,11 @@ public class ArduinoCompilerService {
       // Lấy sketch name từ map
       String sketchName = sessionSketchNames.get(sessionId);
       if (sketchName == null) {
-        System.out.println("⚠️ No sketch name found for session: " + sessionId);
+        System.out.println("No sketch name found for session: " + sessionId);
         return;
       }
 
-      System.out.println("🧹 Cleaning up Arduino cache for session: " + sessionId + " (sketch: " + sketchName + ")");
+      System.out.println("Cleaning up Arduino cache for session: " + sessionId + " (sketch: " + sketchName + ")");
 
       // Search in common cache locations
       String[] cachePaths = {
@@ -276,11 +275,11 @@ public class ArduinoCompilerService {
       for (String cachePath : cachePaths) {
         File cacheDir = new File(cachePath);
         if (!cacheDir.exists()) {
-          System.out.println("⏭️ Cache directory not found: " + cachePath);
+          System.out.println("Cache directory not found: " + cachePath);
           continue;
         }
 
-        System.out.println("🔍 Searching in: " + cachePath);
+        System.out.println("Searching in: " + cachePath);
 
         // Tìm và xóa tất cả files matching sketch name
         Files.walk(Paths.get(cachePath), 10)
@@ -299,9 +298,9 @@ public class ArduinoCompilerService {
               try {
                 Files.delete(filePath);
                 deletedCount.incrementAndGet();
-                System.out.println("🗑️ Deleted Arduino cache file: " + filePath);
+                System.out.println("Deleted Arduino cache file: " + filePath);
               } catch (Exception e) {
-                System.err.println("⚠️ Failed to delete " + filePath + ": " + e.getMessage());
+                System.err.println("Failed to delete " + filePath + ": " + e.getMessage());
               }
             });
 
@@ -314,7 +313,7 @@ public class ArduinoCompilerService {
                 // Chỉ xóa nếu directory rỗng
                 if (Files.list(dir).count() == 0) {
                   Files.delete(dir);
-                  System.out.println("🗑️ Deleted empty directory: " + dir);
+                  System.out.println("Deleted empty directory: " + dir);
                   deletedCount.incrementAndGet();
                 }
               } catch (Exception e) {
@@ -323,13 +322,13 @@ public class ArduinoCompilerService {
             });
       }
 
-      System.out.println("✅ Arduino cache cleanup completed - deleted " + deletedCount.get() + " items");
+      System.out.println("Arduino cache cleanup completed - deleted " + deletedCount.get() + " items");
 
       // Remove từ map sau khi cleanup xong
       sessionSketchNames.remove(sessionId);
 
     } catch (Exception e) {
-      System.err.println("⚠️ Failed to cleanup Arduino cache: " + e.getMessage());
+      System.err.println("Failed to cleanup Arduino cache: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -395,7 +394,7 @@ public class ArduinoCompilerService {
   }
 
   /**
-   * 📚 On-demand: Đảm bảo libraries đã được cài đặt
+   * On-demand: Đảm bảo libraries đã được cài đặt
    * Parse #include từ code và tự động cài libraries chưa có
    */
   private void ensureLibrariesInstalled(String sessionId, File arduinoFile) {
@@ -425,18 +424,18 @@ public class ArduinoCompilerService {
 
         // Library chưa có → cài mới
         wsHandler.sendLog(sessionId, "", "INFO");
-        wsHandler.sendLog(sessionId, "📚 Library " + libraryName + " chưa có, đang cài...", "WARN");
+        wsHandler.sendLog(sessionId, "Library " + libraryName + " chưa có, đang cài...", "WARN");
 
         ProcessBuilder installCmd = new ProcessBuilder(
             "arduino-cli", "lib", "install", libraryName);
 
         executeCommandWithProgress(installCmd, sessionId);
-        wsHandler.sendLog(sessionId, "✅ Đã cài library " + libraryName, "INFO");
+        wsHandler.sendLog(sessionId, "Đã cài library " + libraryName, "INFO");
       }
 
     } catch (Exception e) {
       // Không throw error, chỉ warning vì có thể compile được mà không cần library
-      wsHandler.sendLog(sessionId, "⚠️ Không thể kiểm tra libraries: " + e.getMessage(), "WARN");
+      wsHandler.sendLog(sessionId, "Không thể kiểm tra libraries: " + e.getMessage(), "WARN");
     }
   }
 
@@ -591,25 +590,25 @@ public class ArduinoCompilerService {
     return output.toString();
   }
 
-  /**
-   * ✅ Helper: Cleanup old build files trước khi compile
-   * Xóa toàn bộ build folder của session
-   */
-  private void cleanupOldBuildFiles(Path buildPath, String sessionId) {
-    try {
-      Files.walk(buildPath)
-          .sorted((a, b) -> b.compareTo(a)) // Xóa file trước, folder sau
-          .forEach(path -> {
-            try {
-              Files.delete(path);
-              System.out.println("🗑️ Deleted old build: " + path);
-            } catch (IOException e) {
-              System.err.println("Failed to delete: " + path);
-            }
-          });
-      System.out.println("✅ Cleaned up old build files for session: " + sessionId);
-    } catch (IOException e) {
-      System.err.println("⚠️ Error cleaning old build files: " + e.getMessage());
-    }
-  }
+  // /**
+  //  * Helper: Cleanup old build files trước khi compile
+  //  * Xóa toàn bộ build folder của session
+  //  */
+  // private void cleanupOldBuildFiles(Path buildPath, String sessionId) {
+  //   try {
+  //     Files.walk(buildPath)
+  //         .sorted((a, b) -> b.compareTo(a)) // Xóa file trước, folder sau
+  //         .forEach(path -> {
+  //           try {
+  //             Files.delete(path);
+  //             System.out.println("Deleted old build: " + path);
+  //           } catch (IOException e) {
+  //             System.err.println("Failed to delete: " + path);
+  //           }
+  //         });
+  //     System.out.println("Cleaned up old build files for session: " + sessionId);
+  //   } catch (IOException e) {
+  //     System.err.println("Error cleaning old build files: " + e.getMessage());
+  //   }
+  // }
 }

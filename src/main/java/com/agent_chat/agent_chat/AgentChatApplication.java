@@ -14,3 +14,6 @@ public class AgentChatApplication {
 //mvn clean package -DskipTests
 //docker-compose down
 //docker-compose up --build
+//docker exec -it mongodb_container mongosh \
+  // "mongodb://root:123456@localhost:27017/appAgentDB?authSource=admin"
+// db.dropDatabase()

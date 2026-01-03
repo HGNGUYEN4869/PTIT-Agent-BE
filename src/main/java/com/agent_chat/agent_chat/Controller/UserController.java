@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.agent_chat.agent_chat.Config.JwtUtil;
 import com.agent_chat.agent_chat.DTO.AuthResponse;
+import com.agent_chat.agent_chat.DTO.CheckAccount;
+import com.agent_chat.agent_chat.DTO.CheckAccountResponse;
 import com.agent_chat.agent_chat.DTO.LoginRequest;
 import com.agent_chat.agent_chat.DTO.RegisterRequest;
 import com.agent_chat.agent_chat.Entity.User;
@@ -119,10 +121,10 @@ public class UserController {
 
       ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", newAccessToken)
           .httpOnly(true)
-          .secure(false)
+          .secure(true)
           .path("/")
           .maxAge(15 * 60)
-          .sameSite("Lax")
+          .sameSite("None")
           .build();
 
       return ResponseEntity.ok()
@@ -131,6 +133,8 @@ public class UserController {
               "userId", user.getIdUser(),
               "username", user.getUserName(),
               "email", user.getEmail(),
+              "stuId", user.getStuId(),
+              "citizenId", user.getCitizenId(),
               "tokenRefreshed", true));
 
     } catch (Exception e) {
@@ -147,19 +151,19 @@ public class UserController {
       // Set Access Token as HttpOnly Cookie (15 minutes)
       ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", authResponse.getAccessToken())
           .httpOnly(true)
-          .secure(false)
+          .secure(true)
           .path("/")
           .maxAge(15 * 60)
-          .sameSite("Lax")
+          .sameSite("None")
           .build();
 
       // Set Refresh Token as HttpOnly Cookie (7 days)
       ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", authResponse.getRefreshToken())
           .httpOnly(true)
-          .secure(false)
+          .secure(true)
           .path("/agent/auth/me")
           .maxAge(7 * 24 * 60 * 60)
-          .sameSite("Lax")
+          .sameSite("None")
           .build();
 
       // Trả về response với cookies và thông tin user
@@ -170,7 +174,10 @@ public class UserController {
               "message", authResponse.getMessage(),
               "userId", authResponse.getUserId(),
               "username", authResponse.getUserName(),
-              "email", authResponse.getEmail()));
+              "email", authResponse.getEmail(),
+              "stuId", authResponse.getStuId(),
+              "citizenId", authResponse.getCitizenId()
+            ));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Map.of("error", e.getMessage()));
@@ -185,19 +192,19 @@ public class UserController {
       // Set Access Token as HttpOnly Cookie (15 minutes)
       ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", authResponse.getAccessToken())
           .httpOnly(true) // Không thể đọc bằng JavaScript
-          .secure(false) // Set true khi dùng HTTPS trong production
+          .secure(true) // Set true khi dùng HTTPS trong production
           .path("/") // Cookie có hiệu lực cho toàn bộ domain
           .maxAge(15 * 60) // 15 phút (giống ACCESS_TOKEN_VALIDITY)
-          .sameSite("Lax") // Chống CSRF attack
+          .sameSite("None") // Chống CSRF attack
           .build();
 
       // Set Refresh Token as HttpOnly Cookie (7 days)
       ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", authResponse.getRefreshToken())
           .httpOnly(true) // Không thể đọc bằng JavaScript
-          .secure(false) // Set true khi dùng HTTPS trong production
+          .secure(true) // Set true khi dùng HTTPS trong production
           .path("/agent/auth/me") // Chỉ gửi khi call refresh endpoint
           .maxAge(7 * 24 * 60 * 60) // 7 ngày (giống REFRESH_TOKEN_VALIDITY)
-          .sameSite("Lax") // Chống CSRF attack
+          .sameSite("None") // Chống CSRF attack
           .build();
 
       // Trả về response với cookies trong header và KHÔNG chứa tokens trong body
@@ -208,7 +215,24 @@ public class UserController {
               "message", authResponse.getMessage(),
               "userId", authResponse.getUserId(),
               "username", authResponse.getUserName(),
-              "email", authResponse.getEmail()));
+              "email", authResponse.getEmail(),
+              "citizenId", authResponse.getCitizenId(),
+              "stuId", authResponse.getStuId()));
+    } catch (RuntimeException e) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", e.getMessage()));
+    }
+  }
+  @PostMapping("/checkAccount")
+  public ResponseEntity<?> checkAccount(@RequestBody CheckAccount checkAccount) {
+    try {
+      CheckAccountResponse checkAccountResponse = userService.checkAccount(checkAccount);
+
+      return ResponseEntity.ok()
+          .body(Map.of(
+              "message", checkAccountResponse.getMessage(),
+              "email", checkAccountResponse.getEmail(),
+              "username", checkAccountResponse.getUserName()));
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
           .body(Map.of("error", e.getMessage()));
@@ -226,14 +250,14 @@ public class UserController {
       // Xóa cookies bằng cách set maxAge = 0
       ResponseCookie deleteAccessToken = ResponseCookie.from("accessToken", "")
           .httpOnly(true)
-          .secure(false)
+          .secure(true)
           .path("/")
           .maxAge(0)
           .build();
 
       ResponseCookie deleteRefreshToken = ResponseCookie.from("refreshToken", "")
           .httpOnly(true)
-          .secure(false)
+          .secure(true)
           .path("/api/auth/refresh")
           .maxAge(0)
           .build();
